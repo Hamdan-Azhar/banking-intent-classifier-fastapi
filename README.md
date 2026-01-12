@@ -200,3 +200,8 @@ Explore the API at:
 http://localhost:8000/docs
 ```---
 
+# Docker build command 
+docker build -t intent-app .
+
+# Docker container command
+ docker run -p 8080:80 --name intent-container intent-app

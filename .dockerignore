@@ -1,0 +1,7 @@
+experiments/
+*.ipynb
+__pycache__/
+.env
+.git
+README.md
+.gitignore

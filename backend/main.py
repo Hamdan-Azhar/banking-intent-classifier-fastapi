@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from api.endpoints import router as api_router
-from ml.ml_model import load_model
+from backend.endpoints import router as api_router
+from ml.load_model import load_model
 
 app = FastAPI(title="Intent Classification API", version="1.0")
 
