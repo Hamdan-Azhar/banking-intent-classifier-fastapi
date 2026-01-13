@@ -4,6 +4,12 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-📡-green)](https://fastapi.tiangolo.com/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-💻-orange)](https://streamlit.io/)
 
+## 🚀 Live Demo
+
+🔗 **[Live Demo](https://p01--banking-intent-classification-system--hyf6vq9658q7.code.run/)** 
+Interactive Streamlit UI for real-time and batch banking intent classification.
+
+
 ## 🎯 Problem Statement & Overview
 
 Digital banking queries (e.g., *"check my balance"*, *"transfer money"*) are often short, noisy, and ambiguous, making automated support difficult. This **Banking Intent Classification system** solves this by formulating intent recognition as a **multi-class text classification problem**, mapping raw text to predefined categories for smarter automation. Built using classical NLP techniques, the system features a full ML lifecycle—from preprocessing to training—and is deployed via a **FastAPI backend** and an **interactive Streamlit app** for real-time testing and batch analysis.
@@ -83,7 +89,7 @@ We experimented with three linear classifiers—**Logistic Regression**, **Naive
 
 #### 🧪 Validation Strategies
 * **Train/Validation Split:** 20% of the training data was used as validation set. Both Logistic Regression and Linear SVM achieved high validation accuracy (~99%) in this setup.
-* **3-Fold Cross-Validation:** K-Fold cross-validation was applied across the entire dataset, providing a more reliable estimate of real-world performance.
+* **3-Fold Cross-Validation:** K-Fold cross-validation was applied across the entire training dataset, providing a more reliable estimate of real-world performance.
 
 #### 📊 Model Comparison Results
 The table below summarizes the performance metrics across both validation strategies:
@@ -99,7 +105,7 @@ The table below summarizes the performance metrics across both validation strate
 
 ### 5️⃣ Model Evaluation & Selection
 
-**Logistic Regression** emerged as the top-performing model, achieving a test accuracy of **97.5%**. 
+We stored the best performing models obtained in the validation phase and evaluated them on testing data. **Logistic Regression** emerged as the top-performing model, achieving a test accuracy of **97.5%**. 
 
 | Model | Test Accuracy |
 | :--- | :--- |
@@ -136,14 +142,7 @@ In an attempt to further optimize performance, we implemented a **Majority Votin
 
 **Conclusion:** The ensemble actually resulted in a slight performance dip compared to the standalone Logistic Regression model. Consequently, we opted for the simpler, more efficient **Logistic Regression** model for the final production deployment.
 
-## 🧩 Application Architecture
-
-The project consists of:
-
-* **Streamlit frontend** – interactive interface for single or batch query classification
-* **FastAPI backend** – serves the trained NLP model and exposes endpoints for inference and metadata
-
-### 📌 Available Endpoints (`/api`)
+## 📌 Available Endpoints (`/api`)
 
 #### `GET /api/health`
 Lightweight health-check endpoint.
@@ -184,7 +183,7 @@ Model metadata and inspection endpoint.
 
 ---
 
-### 🐳 Docker Deployment
+## 🐳 Docker Deployment
 
 For a consistent and isolated environment, you can deploy the entire stack using **Docker**. This bundles the FastAPI backend, Streamlit frontend, and the trained model into a single containerized unit.
 
@@ -200,14 +199,13 @@ Launch the container, mapping the internal port to your local machine (e.g., por
 
 ``` bash
 # This command stops/removes any existing container with the same name before starting a new one
-docker rm -f intent-container 2>/dev/null || true
-docker run -p 8080:80 --name intent-container intent-app
+docker rm -f intent-container 2>/dev/null; docker run -p 8501:8501 --name intent-container intent-app
 ```
 
 Once the container is running, the services will be accessible via the mapped port on your localhost.
 
 ---
 
-### 🎯 Conclusion
+## 🎯 Conclusion
 
 This project demonstrates a production-ready approach to **Banking Intent Classification**. By combining classical NLP robustness (TF-IDF + Logistic Regression) with modern deployment stack (Streamlit + FastAPI + Docker), it provides a scalable solution for automating customer support queries.
