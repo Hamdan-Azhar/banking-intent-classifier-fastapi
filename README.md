@@ -1,18 +1,29 @@
 # Banking Intent Classification System 🏦🤖
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-📡-green)](https://fastapi.tiangolo.com/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-💻-orange)](https://streamlit.io/)
 
-A **Banking Intent Classification system** built using classical NLP techniques and deployed as a **FastAPI REST service**. The project demonstrates the full lifecycle of an NLP model: data loading, preprocessing, feature engineering, training, evaluation, and deployment.
+## 🎯 Problem Statement & Overview
 
+Digital banking queries (e.g., *"check my balance"*, *"transfer money"*) are often short, noisy, and ambiguous, making automated support difficult. This **Banking Intent Classification system** solves this by formulating intent recognition as a **multi-class text classification problem**, mapping raw text to predefined categories for smarter automation. Built using classical NLP techniques, the system features a full ML lifecycle—from preprocessing to training—and is deployed via a **FastAPI backend** and an **interactive Streamlit app** for real-time testing and batch analysis.
+
+The saved classification model identifies the following six banking intents:
+
+* **Card Payment Fee Charged**: Queries regarding unexpected fees on card transactions.
+* **Declined Cash Withdrawal**: Issues involving failed attempts to withdraw money from an ATM.
+* **Request Refund**: Users seeking to get their money back for a specific transaction.
+* **Transaction Charged Twice**: Reporting duplicate charges for a single purchase.
+* **Transfer Not Received by Recipient**: Tracking sent funds that haven't reached the destination.
+* **Wrong Amount of Cash Received**: Discrepancies between requested and received cash at an ATM.
 ---
 
 ## 🔄 End-to-End System Flow
 
-```text
-User Query
+```
+User Query (via Streamlit UI)
    ↓
-FastAPI REST Endpoint (/predict)
+FastAPI REST Endpoint (/api/classify)
    ↓
 Text Preprocessing
    ↓
@@ -22,186 +33,181 @@ Logistic Regression Classifier
    ↓
 Predicted Intent + Confidence Score
 ```
+---
 
-After training and evaluation of the preprocesser and vectorizer, their weights are stored and then called with the API layer, making it usable in real banking systems such as chatbots and customer-support automation.
+## 🧠 Experiment and Analysis steps
 
-## 🎯 Problem Statement
+All experimentation and model development are documented in **experiments/training.ipynb**. The steps are as follows:
 
-In digital banking systems, user inputs are typically short, ambiguous, and noisy (e.g., *"check my balance"*, *"transfer money"*). Accurately identifying the **intent** behind such queries is essential for automation, chatbots, and intelligent customer support.
+### 1️⃣ Text Preprocessing
 
-This project formulates intent recognition as a **multi‑class text classification problem**, mapping raw text queries to predefined banking intents.
+We do preprocessing on raw banking queries that involve **lower-casing**, **removal of punctuation and special characters** followed by **token normalization** to reduce vocabulary noise while preserving semantic intent. For example:
+
+| Before preprocessing | After preprocessing |
+| :--- | :--- |
+| Why did I only receive a partial amount of what I tried to withdraw? | why did i only receive a partial amount of what i tried to withdraw? |
+| my atm transaction was wrong | my atm transaction was wrong |
+| why did i only get 20.00 | why did i only get 20.00 |
 
 ---
 
-## 🧠 Machine Learning Pipeline
+### 2️⃣ Exploratory Data Analysis (EDA)
 
-All experimentation and model development are documented in:
+#### 📉 Text Length Distribution
+We analyzed the word count distribution across all categories using histograms. We observe that **wrong_amount_of_cash_received** and **card_payment_fee_charged** consist of notably shorter queries compared to other intents, which often contain more descriptive language.
 
-```
-ml/training.ipynb
-```
+![Text Length Distribution](images/image_1.png)
 
-### 1️⃣ Data Loading & Exploration
+#### ☁️ Intent-Based Word Clouds
+We generated intent-specific word clouds to visualize the prominent vocabulary for each category. This reveals that **declined_cash_withdrawal** and **wrong_amount_of_cash_received** share significant overlap in high-frequency terms like **"atm"** and **"cash"**, suggesting that these two classes may be more challenging for the model to differentiate accurately.
 
-* Dataset is loaded using **Pandas**
-* Initial inspection includes:
-
-  * Class distribution
-  * Sample utterances per intent
-  * Missing / noisy text handling
-
-📌 *Suggested visual*:
-`Class distribution bar chart` — helps reviewers immediately see dataset balance.
-
----
-
-### 2️⃣ Text Preprocessing
-
-The raw banking queries undergo standard NLP preprocessing:
-
-* Lower‑casing
-* Removal of punctuation and special characters
-* Token normalization
-
-This step reduces vocabulary noise while preserving semantic intent.
-
-📌 *Suggested visual*:
-`Before vs after preprocessing examples` (small table or screenshot).
-
----
+![Class-wise Word Clouds](images/image_2.png)
 
 ### 3️⃣ Feature Engineering — TF‑IDF
 
-Text is transformed into numerical vectors using **TF‑IDF (Term Frequency–Inverse Document Frequency)**:
+To transform raw text into numerical vectors, we utilize **TF-IDF (Term Frequency–Inverse Document Frequency)**. This lightweight approach captures the importance of words relative to specific intent classes, prevents common tokens from dominating the feature space, and produces a high-dimensional representation ideal for linear models.
 
-* Captures importance of words relative to intent classes
-* Prevents dominance of common but uninformative tokens
-* Produces a sparse, high‑dimensional representation suitable for linear models
+#### 📍 t-SNE Visualization of Feature Space
+By applying **t-SNE** to TF-IDF vectors and plotting them, we see clear clustering and separation between different intent classes, confirming that TF-IDF vectorization produces highly discriminative features for our classifier.
 
-This choice reflects a deliberate trade‑off:
+![t-SNE Visualization](images/image_3.png)
 
-> interpretability and robustness over unnecessary model complexity.
+#### 📏 Intra- vs Inter-Class Cosine Similarity
+Using **Cosine Similarity** analysis, we further prove in the boxplot below that intra-class similarity (similarity within the same intent) is significantly higher than inter-class similarity across both training and testing sets. This confirms that the vectorizer is extracting meaningful and consistent representations for each banking intent.
 
-📌 *Suggested visuals*:
+![Cosine Similarity Analysis](images/image_4.png)
 
-* WordCloud per intent class
-* Top‑N TF‑IDF features per class (table or bar plot)
+### 4️⃣ Model Training & Hyperparameter Tuning
 
----
+We experimented with three linear classifiers—**Logistic Regression**, **Naive Bayes**, and **Support Vector Machine (SVM)**—using two distinct validation strategies to identify the most robust configuration.
 
-### 4️⃣ Model Training — Logistic Regression
+#### 🧪 Validation Strategies
+* **Train/Validation Split:** 20% of the training data was used as validation set. Both Logistic Regression and Linear SVM achieved high validation accuracy (~99%) in this setup.
+* **3-Fold Cross-Validation:** K-Fold cross-validation was applied across the entire dataset, providing a more reliable estimate of real-world performance.
 
-A **Logistic Regression classifier** is trained on the TF‑IDF vectors:
+#### 📊 Model Comparison Results
+The table below summarizes the performance metrics across both validation strategies:
 
-* Strong baseline for text classification
-* Fast to train, easy to debug
-* Coefficients directly reflect feature importance
+| Classifier | Accuracy | Precision | Recall | F1-Score | Validation Type |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Logistic Regression** | 0.9905 | 0.9907 | 0.9905 | 0.9905 | Train/Val Split |
+| **Naive Bayes** | 0.9715 | 0.9719 | 0.9715 | 0.9716 | Train/Val Split |
+| **Linear SVM** | 0.9905 | 0.9907 | 0.9905 | 0.9905 | Train/Val Split |
+| **Logistic Regression** | 0.9696 | 0.9703 | 0.9696 | 0.9696 | 3-Fold CV |
+| **Naive Bayes** | 0.9630 | 0.9636 | 0.9630 | 0.9629 | 3-Fold CV |
+| **Linear SVM** | 0.9734 | 0.9743 | 0.9734 | 0.9734 | 3-Fold CV |
 
-The notebook documents:
+### 5️⃣ Model Evaluation & Selection
 
-* Train / test split
-* Model fitting
-* Hyperparameter defaults (kept intentionally simple)
+**Logistic Regression** emerged as the top-performing model, achieving a test accuracy of **97.5%**. 
 
-📌 *Suggested visual*:
-`Model training workflow diagram`
+| Model | Test Accuracy |
+| :--- | :--- |
+| **Logistic Regression** | **97.5%** |
+| **Naive Bayes** | 96.6% |
+| **Linear SVM** | 96.6% |
 
----
+#### 🧩 Confusion Matrices
+The confusion matrices confirm our earlier EDA findings: all classifiers occasionally struggle to distinguish between `wrong_amount_of_cash_received` and `declined_cash_withdrawal`. This semantic overlap remains the primary driver of misclassifications across all models.
 
-### 5️⃣ Model Evaluation
-
-Performance is evaluated using standard classification metrics:
-
-* Accuracy
-* Precision, Recall, F1‑Score
-* Confusion Matrix
-
-This provides both **quantitative performance** and **qualitative error analysis**.
-
-📌 *Highly recommended visuals*:
-
-* Confusion Matrix heatmap
-* Classification report screenshot
-* Misclassified examples table
-
-These visuals strongly signal analytical maturity to admissions committees.
+![Confusion Matrices](images/image_5.png)
 
 ---
 
-## 🧩 API Architecture
+### 6️⃣ Confidence & Error Deep-Dive
 
-Endpoints are exposed under the `api/` prefix. These endpoints operationalize the trained NLP model and provide both inference and system-level metadata, following clean API design principles.
+We conducted a dual analysis to evaluate the reliability of our model's predictions beyond simple accuracy metrics.
 
-### 📌 Available Endpoints (`api/`)
+* **Confidence Analysis:** By plotting the maximum predicted probabilities, we found that **Linear SVM** produces the most "confident" predictions (density centered around 0.9), followed by Logistic Regression and Naive Bayes.
+* **High-Confidence Misclassifications:** We isolated errors where the model was >70% confident but incorrect. The most common error was misidentifying `wrong_amount_of_cash_received` as `declined_cash_withdrawal`, reinforcing the need for more granular features in future iterations.
+
+![Confidence Analysis](images/image_6.png)
+
+---
+
+### 7️⃣ Ensemble Experimentation
+
+In an attempt to further optimize performance, we implemented a **Majority Voting Ensemble** combining all three classifiers. 
+
+| Approach | Test Accuracy |
+| :--- | :--- |
+| **Standalone Logistic Regression** | **97.5%** |
+| **Ensemble (Voting)** | 97.0% |
+
+**Conclusion:** The ensemble actually resulted in a slight performance dip compared to the standalone Logistic Regression model. Consequently, we opted for the simpler, more efficient **Logistic Regression** model for the final production deployment.
+
+## 🧩 Application Architecture
+
+The project consists of:
+
+* **Streamlit frontend** – interactive interface for single or batch query classification
+* **FastAPI backend** – serves the trained NLP model and exposes endpoints for inference and metadata
+
+### 📌 Available Endpoints (`/api`)
 
 #### `GET /api/health`
 Lightweight health-check endpoint.
 
-- Confirms that the API service is running.
-- Useful for deployment monitoring and orchestration systems.
+* Confirms that the API service is running
+* Useful for deployment monitoring
 
 ---
 
 #### `POST /api/classify`
 Single-text intent classification endpoint.
 
-- Accepts a single banking-related text query.
-- Applies the same preprocessing and TF-IDF vectorization used during training.
-- Uses the trained Logistic Regression model to infer intent.
-- Returns the predicted intent label along with a confidence score.
-
-This endpoint represents the primary inference path for real-time applications such as chatbots.
+* Accepts a single banking-related text query
+* Applies preprocessing and TF-IDF vectorization
+* Uses the trained Logistic Regression model to infer intent
+* Returns the predicted intent label along with a confidence score
 
 ---
 
 #### `POST /api/classify/batch`
 Batch intent classification endpoint.
 
-- Accepts multiple text queries in a single request.
-- Processes each query independently through the same NLP pipeline.
-- Returns intent predictions and confidence scores for each input.
-
-Designed for offline analysis, bulk evaluation, or integration with data pipelines.
+* Accepts multiple text queries in a single request
+* Processes each query independently through the same NLP pipeline
+* Returns intent predictions and confidence scores for each input
 
 ---
 
 #### `GET /api/model/info` *(Protected)*
 Model metadata and inspection endpoint.
 
-- Requires HTTP Basic authentication.
-- Exposes model and vectorizer details, including:
-  - model type,
-  - vectorizer type,
-  - number of intent classes,
-  - list of supported intent labels.
-
-This endpoint improves transparency and supports debugging, auditing, and system introspection without exposing model internals.
+* Requires HTTP Basic authentication
+* Exposes model and vectorizer details:
+  * Model type
+  * Vectorizer type
+  * Number of intent classes
+  * List of supported intent labels
 
 ---
 
-### 🔐 Security Note
+### 🐳 Docker Deployment
 
-Sensitive endpoints are protected using **HTTP Basic Authentication**, demonstrating awareness of access control even in lightweight ML services.
+For a consistent and isolated environment, you can deploy the entire stack using **Docker**. This bundles the FastAPI backend, Streamlit frontend, and the trained model into a single containerized unit.
 
----
+#### 1. Build the Image
+Create the Docker image using the following command:
 
-## 🛠️ Running the Project
-
-```bash
-git clone https://github.com/Hamdan-Azhar/banking-intent-classifier-fastapi.git
-cd banking-intent-classifier-fastapi
-pip install -r requirements.txt
-uvicorn api.main:app --reload
-```
-
-Explore the API at:
-
-```
-http://localhost:8000/docs
-```---
-
-# Docker build command 
+``` bash
 docker build -t intent-app .
+```
 
-# Docker container command
- docker run -p 8080:80 --name intent-container intent-app
+#### 2. Run the Container
+Launch the container, mapping the internal port to your local machine (e.g., port 8080):
+
+``` bash
+# This command stops/removes any existing container with the same name before starting a new one
+docker rm -f intent-container 2>/dev/null || true
+docker run -p 8080:80 --name intent-container intent-app
+```
+
+Once the container is running, the services will be accessible via the mapped port on your localhost.
+
+---
+
+### 🎯 Conclusion
+
+This project demonstrates a production-ready approach to **Banking Intent Classification**. By combining classical NLP robustness (TF-IDF + Logistic Regression) with modern deployment stack (Streamlit + FastAPI + Docker), it provides a scalable solution for automating customer support queries.
